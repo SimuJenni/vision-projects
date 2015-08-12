@@ -1,0 +1,11 @@
+function angle = computeAngle(times, frame,frontFrame, rotDir, lastFrame)
+%COMPUTES THE VIEWPOINT ANGLE BASED ON THE INFORMATION PROVIDED
+
+degPerSec = 360/times(lastFrame);
+
+
+
+angle = 0;
+
+end
+
