@@ -1,11 +1,11 @@
-function [ train ] = epflData( epflDatasetPath, startIdx, endIdx )
+function [ train, frames360, times, imWidth, imHeight] = epflData( epflDatasetPath, startIdx, endIdx )
 %PARSES TRAINING DATA FROM THE EPFL DATASET
 %   Returns a cell-array of training examples taken from the sequences
 %   startIdx until endIdx. 
 %   Training examples have the following fields:
 %       .im: Image-path
 %       .bbox: Bounding box in the format [xmin, ymin, xmax, ymax]
-%       .angle: Viewpoint angle in radians
+%       .angle: Viewpoint angle in degrees (range [-180,180])
 
 % Gather info about the sequences
 info_fid = fopen( [epflDatasetPath 'tripod-seq.txt'], 'r' );
@@ -20,7 +20,7 @@ rotDir = str2num(fgets(info_fid));
 
 % Gather frame-times
 times_fid = fopen( [epflDatasetPath 'times.txt'], 'r' );
-times = []
+times = [];
 idx = 1;
 while ~feof(times_fid)
    times{idx} = str2num(fgets(times_fid));
@@ -33,12 +33,13 @@ idx = 1;
 for seq = startIdx:endIdx
     bbox_fid = fopen(sprintf([epflDatasetPath bbFormat], seq), 'r');
     for frame = 1:frames360(seq)
-        train{idx}.im = sprintf([epflDatasetPath imgFormat], seq, frame);
+        train{idx}.im = strtrim(sprintf([epflDatasetPath imgFormat], seq, frame));
         train{idx}.seq = seq;
         train{idx}.frame = frame;
         train{idx}.angle = computeAngle(times{seq}, frame, ...
             frontFrame(seq), rotDir(seq), frames360(seq));
-        train{idx}.bbox = str2num(fgets(bbox_fid));
+        bbInf = str2num(fgets(bbox_fid));
+        train{idx}.bbox = [bbInf(1), bbInf(2), bbInf(1)+bbInf(3), bbInf(2)+bbInf(4)] ;
         idx = idx+1;
     end
 end
