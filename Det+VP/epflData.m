@@ -17,6 +17,7 @@ bbFormat = strtrim(fgets(info_fid));
 frames360 = str2num(fgets(info_fid));
 frontFrame = str2num(fgets(info_fid));
 rotDir = str2num(fgets(info_fid));
+fclose(info_fid);
 
 % Gather frame-times
 times_fid = fopen( [epflDatasetPath 'times.txt'], 'r' );
@@ -26,6 +27,8 @@ while ~feof(times_fid)
    times{idx} = str2num(fgets(times_fid));
    idx = idx+1;
 end
+fclose(times_fid);
+
  
 % Parse the training data
 train = [];
@@ -42,6 +45,7 @@ for seq = startIdx:endIdx
         train{idx}.bbox = [bbInf(1), bbInf(2), bbInf(1)+bbInf(3), bbInf(2)+bbInf(4)] ;
         idx = idx+1;
     end
+    fclose(bbox_fid);
 end
 
 end
