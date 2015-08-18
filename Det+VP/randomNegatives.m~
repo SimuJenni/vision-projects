@@ -10,6 +10,7 @@ for i = 1:min(numneg, maxnum)
     fprintf('Random negatives: %d/%d\n', i, min(numneg, maxnum));
   end
   feat=featureExtractor(imread(neg(i).im));
+  feat = padFeature(testFeat, 2*featSize(2), 0);
 
   if size(feat,2) > featSize(2) && size(feat,1) > featSize(1)
     for j = 1:rndneg
