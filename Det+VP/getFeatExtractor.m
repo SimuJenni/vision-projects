@@ -1,4 +1,5 @@
-function [ featExtractor, cellSize, featDim, visualizer ] = getFeatExtractor( featType, resizeFact )
+function [ featExtractor, cellSize, featDim, visualizer ] = ... 
+    getFeatExtractor( featType, resizeFact )
 %Returns a feature-extractor and its corresponding cellsize.
 % Input: featType - 'hog' for HOG and 'imgrad' for image-gradients 
 if(strcmp('hog', featType))
@@ -13,4 +14,11 @@ if(strcmp('imgrad', featType))
     featExtractor = @(x) imgradient(im2double(rgb2gray(x)));
     visualizer = @(x) imshow(x);
 end
+if(strcmp('cnn', featType))
+    cellSize = 16;
+    featDim = 256;
+    featExtractor = cnnFeatureExtractor('~/data/', resizeFact);
+    visualizer = @(x) imshow(x);
+end
+
 

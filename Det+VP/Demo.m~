@@ -1,16 +1,17 @@
 run ~/3rd_party_libs/vlfeat-0.9.19/toolbox/vl_setup
+run ~/3rd_party_libs/matconvnet/matlab/vl_setupnn
 epflDatasetPath = '~/data/epfl-gims08/tripod-seq/';
 VOCDevkitPath = '~/data/VOCdevkit';
 
-featType = 'hog';
-imSizeFactor = 0.5; 
+featType = 'cnn';
+imSizeFactor = 0.6; 
 [featExtractor, cellSize, featDim, visualizer] = getFeatExtractor(featType, imSizeFactor);
-stretchFactor = 1.5;                % Stretching coefficient 
-sigma = 16/cellSize;     % Parameter for importance filter
+stretchFactor = 1.2;     
+sigma = 16/cellSize;     % Parameter for (gaussian) importance filter 
 visualize = false;
-lambda = 0.001;
-maxNeg = 50000;
-hardNegItr = 3;
+lambda = 0.1;
+maxNeg = 10000;
+hardNegItr = 4;
 
 % Get relevant data and feature info
 startID = 1;
@@ -20,25 +21,55 @@ endID = 16;
 neg = negativeExamples(VOCDevkitPath);
 
 % Get negative training-examples
-negTrain = randomNegatives(neg, size(posTrain{1}), featType, maxNeg );
+negTrain = randomNegatives(neg(1:500), size(posTrain{1}), featType, maxNeg );
 
 % Learn SVM classifier
 [W, b] = svmTrain(posTrain, negTrain, lambda);
 for i=1:hardNegItr
     % Get hard negative examples
-    negTrain = hardNegatives(neg, W, b, featType, maxNeg, -1.0005);
+    newNeg = hardNegatives(neg, W, b, featType, maxNeg, -1.05);
+    if(length(newNeg)<0.1*maxNeg)
+        break;
+    end
+    negTrain(1:length(newNeg)) = newNeg;
     [W, b] = svmTrain(posTrain, negTrain, lambda, W, b);
 end
 
 % Test demo
-testIdx = 20;
-xpad = size(W,2);
-[test, frames, times, w, h] = epflData( epflDatasetPath, testIdx, testIdx );
-testFeat = featExtractor(imread(test{1}.im));
-testPadded = padFeature(testFeat, xpad, 0);
-score = convn(testPadded, W, 'valid');
-imagesc(score);
 
-[C, I] = max(score(:));
-[I_row, I_col] = ind2sub(size(score),I);
+startID = 17;
+endID = 20;
+xpad = 2*size(W,2);
+[test, frames, times, w, h] = epflData( epflDatasetPath, startID, endID );
+vpPerformance = zeros(1, length(test));
+
+for id = startID: endID
+    fprintf('Testing: %d/%d\n', id, endID);
+    for j = 1 : frames(id)
+        idx = num+j;
+        testFeat = featExtractor(imread(test{idx}.im));
+        testPadded = padFeature(testFeat, xpad, 0);
+        score = convn(testPadded, W, 'valid');
+        [C, I] = max(score(:));
+        [I_row, I_col] = ind2sub(size(score),I);
+        maxRegion = testPadded(I_row:I_row+size(W,1)-1, I_col:I_col+size(W,2)-1,:);
+        scoreMap = sum(W.*maxRegion, 3);
+        mapSize = numel(scoreMap);
+        boxScore = cell(1, size(W,2));
+        for i = 1:size(W,2)
+            if(bbModel(3,i)-bbModel(1,i)<0)
+                boxScore{i} = sum(sum(scoreMap(bbModel(2,i):bbModel(4,i),1:bbModel(3,i))));
+                boxScore{i} = boxScore{i}+sum(sum(scoreMap(bbModel(2,i):bbModel(4,i),bbModel(1,i):end)));
+%                 boxScore{i} = boxScore{i}/((bbModel(4,i)-bbModel(2,i))*(bbModel(3,i)+size(W,2)-bbModel(1,i)));
+            else
+                boxScore{i} = sum(sum(scoreMap(bbModel(2,i):bbModel(4,i),bbModel(1,i):bbModel(3,i))));
+%                 boxScore{i} = boxScore{i}/((bbModel(4,i)-bbModel(2,i))*(bbModel(3,i)-bbModel(1,i)));
+            end
+        end
+        [c, I] = max(cell2mat(boxScore));
+        vpPerformance(idx) = test{idx}.angle>vpModel(I)
+    end
+    num = num+frames(id);
+
+end
 

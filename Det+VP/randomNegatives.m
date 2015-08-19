@@ -1,7 +1,7 @@
 function [ negTrain ] = randomNegatives( neg, featSize, featType, maxnum )
 %Extracts random negative training examples
 
-featureExtractor = getFeatExtractor(featType, 1);
+featureExtractor = getFeatExtractor(featType, 2);
 numneg = length(neg);
 rndneg = ceil(maxnum/numneg);
 negTrain = cell(0);
