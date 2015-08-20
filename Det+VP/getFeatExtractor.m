@@ -11,7 +11,7 @@ end
 if(strcmp('imgrad', featType))
     cellSize = 1;
     featDim = 1;
-    featExtractor = @(x) imgradient(im2double(rgb2gray(x)));
+    featExtractor = @(x) imgradient(im2double(rgb2gray(imresize(x,resizeFact))));
     visualizer = @(x) imshow(x);
 end
 if(strcmp('cnn', featType))

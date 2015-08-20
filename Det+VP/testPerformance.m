@@ -1,11 +1,16 @@
-function [ VPresult, vpPerformance ] = testVPPerformance( W, bbM,...
-    vpModel, featExtractor, epflDatasetPath, startID, endID  )
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+function [ VPresult, BBresult, vpPerformance, bbPerformance ] = ... 
+    testPerformance( W, bbM, vpModel, featType, imScale, ...
+    epflDatasetPath, startID, endID, visualize )
+%VPresult and BBresult are the ratio of correctly classified
+%viewpoints/bounding-boxes only considering the highest scoring match
 
+[featExtractor, cellSize, featDim, visualizer] = getFeatExtractor( ...
+    featType, imScale);
 xpad = 2*size(W,2);
 [test, frames] = epflData( epflDatasetPath, startID, endID );
 vpPerformance = zeros(1, length(test));
+bbPerformance = zeros(1, length(test));
+
 num = 0;
 
 for id = startID: endID
@@ -31,12 +36,21 @@ for id = startID: endID
             end
         end
         [~, I] = max(cell2mat(bbScore));
+        predBB = mod(bbM(:,I)'+[col-xpad/2,row,col-xpad/2,row]-1, size(W,2));
+        predBB = round(predBB*cellSize/imScale);
+        if visualize
+            box{1} = predBB;
+            box{2} = test{idx}.bbox;
+            showboxes(imread(test{idx}.im), box)
+        end
+        bbPerformance(idx) = box_overlap(predBB, test{idx}.bbox) > 0.5;
         vpPerformance(idx) = test{idx}.angle>=vpModel(1,I) && ...
             test{idx}.angle<=vpModel(2,I);
     end
     num = num+frames(id);
 end
 VPresult = sum(vpPerformance)/length(vpPerformance);
+BBresult = sum(bbPerformance)/length(bbPerformance);
 
 end
 

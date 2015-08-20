@@ -103,11 +103,9 @@ if(~strcmp('imgrad', featType))
 end
 for i=1:resW-1
     if vpModel(2,i)<vpModel(2,i+1)
-        vpModel(2,i) = vpModel(2,i+1);
+        
     end
 end
-vpModel(1,1) = -180;
-vpModel(2,end) = 180;
 
 end
 
