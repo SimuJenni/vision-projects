@@ -36,8 +36,8 @@ for id = startID: endID
             end
         end
         [~, I] = max(cell2mat(bbScore));
-        predBB = mod(bbM(:,I)'+[col-xpad/2,row,col-xpad/2,row]-1, size(W,2));
-        predBB = round(predBB*cellSize/imScale);
+        predBB = mod(bbM(:,I)'+[col-xpad/2,row,col-xpad/2,row]-1, size(W,2))-1;
+        predBB = round(predBB*cellSize/imScale)+1;
         if visualize
             box{1} = predBB;
             box{2} = test{idx}.bbox;

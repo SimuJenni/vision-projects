@@ -1,7 +1,8 @@
-function [pos, bbModel, vpModel] = initModelEPFL( epflPath, startID,...
+function [pos, bbModel, vpModel] = initEPFL( epflPath, startID,...
     endID, stretchFactor, sigma, imScale, featType, visualize )
 %Extracts positive training examples from the EPFL-dataset and initializes
-%the bb-model
+%the bb and vp model. Results in one example per image. Should be used when
+%additional training examples from other datasets are used.
 
 % Get relevant data and feature info
 [train, frames, ~, w, h] = epflData( epflPath, startID, endID );
@@ -41,6 +42,9 @@ for id = startID: endID
     bbHeight = bbHeights(num+1:num+frames(id));
 
     for i = 1 : frames(id)
+        
+        unfold  = zeros(H, W, featDim);  % to test
+        
         % Compute the stride based on the angle
         idx = num+i;
         stride = floor(stretchFactor*wFeat*(1/2+train{idx}.angle/360)) + 1;
@@ -56,7 +60,6 @@ for id = startID: endID
         vp{stride}(end+1) = ceil(train{idx}.angle);
         vp{stride}(end+1) = floor(train{idx}.angle);
 
-
         % Compute image-features
         feat = featExtractor(imread(train{idx}.im));
 
@@ -65,36 +68,27 @@ for id = startID: endID
         unfold(lowerBound(i)+(-bbHeight(i):0), stride+(0:fSize-1),:) = ...
             unfold(lowerBound(i)+(-bbHeight(i):0), stride+(0:fSize-1),:)+...
             seg(lowerBound(i)+(-bbHeight(i):0),:,:);  
-
+        
+        % Extract relevant region and trim the result
+        reg = unfold(max(lowerBound)-resHeight+(2:resHeight), :, :);
+        pos{idx} = reg(:, fSize/2+1:end-fSize/2, :);
+        pos{idx} = pos{idx}*size(pos{idx},2);
         if visualize
-            % Visualize the construction
             figure(1);
-            visualizer(unfold);
+            visualizer(pos{idx});
         end
     end
     num = num+frames(id);
-    
-    % Extract relevant region and trim the result
-    unfold = unfold(max(lowerBound)-resHeight+(1:resHeight), :, :);
-    pos{id} = unfold(:, fSize/2+1:end-fSize/2, :);
-    pos{id}(:, 1:fSize/2, :) = pos{id}(:, 1:fSize/2, :) + unfold(:,...
-        end-fSize/2+1:end, :);
-    pos{id}(:, end-fSize/2+1:end,:) = pos{id}(:,end-fSize/2+1:end,:) + ...
-        unfold(:, 1:fSize/2, :);
-    if visualize
-        f2 = figure(2);
-        movegui(f2,'south');
-        visualizer(pos{id});
-    end
+
 end
 
 % Take the average bb-positions and assotiate with X-position of the model
 resW = size(pos{1},2);
 bbModel = zeros(4,resW);
 bbModel(1,:) = mod(round(cellfun(@mean, bbXmin(1:resW))), resW);
-bbModel(2,:) = round(cellfun(@mean, bbYmin(1:resW)));
+bbModel(2,:) = max(round(cellfun(@mean, bbYmin(1:resW)))-1,1);
 bbModel(3,:) = mod(round(cellfun(@mean, bbXmax(1:resW))), resW);
-bbModel(4,:) = round(cellfun(@mean, bbYmax(1:resW)));
+bbModel(4,:) = max(round(cellfun(@mean, bbYmax(1:resW)))-1,1);
 bbModel(bbModel==0) = 1;
 vpModel = zeros(2,resW);
 if(~strcmp('imgrad', featType))
@@ -103,9 +97,11 @@ if(~strcmp('imgrad', featType))
 end
 for i=1:resW-1
     if vpModel(2,i)<vpModel(2,i+1)
-        
+        vpModel(2,i) = vpModel(2,i+1);
     end
 end
+vpModel(1,1) = -180;
+vpModel(2,end) = 180;
 
 end
 

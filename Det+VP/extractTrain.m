@@ -48,7 +48,7 @@ for i = 1:length(pos)
             example(bbF(2):bbF(4),1:wF1, :) = ... 
                 feat(bbCenter(1)+round(-hF/2:hF/2), round(bbCenter(2)-wF/2)+wF2+(1:wF1),:).*g_x(:,end+(-wF1+1:0),:);
         end
-        train{end+1} = example;
+        train{end+1} = example*size(example, 2);
 %         visualizer(example);
     catch 
     end

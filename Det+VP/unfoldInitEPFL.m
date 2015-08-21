@@ -1,7 +1,8 @@
-function [pos, bbModel, vpModel] = initModelEPFL( epflPath, startID,...
+function [pos, bbModel, vpModel] = unfoldInitEPFL( epflPath, startID,...
     endID, stretchFactor, sigma, imScale, featType, visualize )
 %Extracts positive training examples from the EPFL-dataset and initializes
-%the bb-model
+%the bb and vp model. Uses unfold approach to generate examples, resulting
+%in one example per car model.
 
 % Get relevant data and feature info
 [train, frames, ~, w, h] = epflData( epflPath, startID, endID );
@@ -41,6 +42,7 @@ for id = startID: endID
     bbHeight = bbHeights(num+1:num+frames(id));
 
     for i = 1 : frames(id)
+                
         % Compute the stride based on the angle
         idx = num+i;
         stride = floor(stretchFactor*wFeat*(1/2+train{idx}.angle/360)) + 1;
@@ -55,7 +57,6 @@ for id = startID: endID
         bbYmax{stride}(end+1) = round(train{idx}.bbox(4)*featScale)-yOs;
         vp{stride}(end+1) = ceil(train{idx}.angle);
         vp{stride}(end+1) = floor(train{idx}.angle);
-
 
         % Compute image-features
         feat = featExtractor(imread(train{idx}.im));
@@ -75,12 +76,12 @@ for id = startID: endID
     num = num+frames(id);
     
     % Extract relevant region and trim the result
-    unfold = unfold(max(lowerBound)-resHeight+(1:resHeight), :, :);
-    pos{id} = unfold(:, fSize/2+1:end-fSize/2, :);
-    pos{id}(:, 1:fSize/2, :) = pos{id}(:, 1:fSize/2, :) + unfold(:,...
+    reg = unfold(max(lowerBound)-resHeight+(2:resHeight), :, :);
+    pos{id} = reg(:, fSize/2+1:end-fSize/2, :);
+    pos{id}(:, 1:fSize/2, :) = pos{id}(:, 1:fSize/2, :) + reg(:,...
         end-fSize/2+1:end, :);
     pos{id}(:, end-fSize/2+1:end,:) = pos{id}(:,end-fSize/2+1:end,:) + ...
-        unfold(:, 1:fSize/2, :);
+        reg(:, 1:fSize/2, :);
     if visualize
         f2 = figure(2);
         movegui(f2,'south');
@@ -92,9 +93,9 @@ end
 resW = size(pos{1},2);
 bbModel = zeros(4,resW);
 bbModel(1,:) = mod(round(cellfun(@mean, bbXmin(1:resW))), resW);
-bbModel(2,:) = round(cellfun(@mean, bbYmin(1:resW)));
+bbModel(2,:) = max(round(cellfun(@mean, bbYmin(1:resW)))-1,1);
 bbModel(3,:) = mod(round(cellfun(@mean, bbXmax(1:resW))), resW);
-bbModel(4,:) = round(cellfun(@mean, bbYmax(1:resW)));
+bbModel(4,:) = max(round(cellfun(@mean, bbYmax(1:resW)))-1,1);
 bbModel(bbModel==0) = 1;
 vpModel = zeros(2,resW);
 if(~strcmp('imgrad', featType))

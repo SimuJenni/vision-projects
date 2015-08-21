@@ -4,10 +4,10 @@ epflDatasetPath = '~/data/epfl-gims08/tripod-seq/';
 Pascal3D = '~/data/PASCAL3D+_release1.1/';
 VOCDevkitPath = '~/data/VOCdevkit';
 
-featType = 'cnn';    % one of 'imgrad', 'hog', 'cnn'
-imScale = 0.6;    % scale image by this before feature computation
+featType = 'hog';    % one of 'imgrad', 'hog', 'cnn'
+imScale = 0.8;    % scale image by this before feature computation
 stretchFactor = 1.3;     
-sigma = 16;     % Parameter for (gaussian) importance filter 
+sigma = 24;     % Parameter for importance filter (divided by cellSize)
 visualize = false;
 
 % SVM parameters
@@ -20,8 +20,10 @@ hardNegItr = 10;
 % Get relevant data and feature info
 startID = 1;
 endID = 16;
-[posTrain, bbModel, vpModel] = initModelEPFL(epflDatasetPath, startID,...
+[posTrain, bbModel, vpModel] = initEPFL(epflDatasetPath, startID,...
     endID, stretchFactor, sigma, imScale, featType, visualize );
+% [posTrain, bbModel, vpModel] = unfoldInitEPFL(epflDatasetPath, startID,...
+%     endID, stretchFactor, sigma, imScale, featType, visualize );
 neg = negativeExamples(VOCDevkitPath);
 
 % Get negative training-examples
@@ -35,7 +37,6 @@ pos = imagenet3Dpos(Pascal3D, false);
 newPosTrain = extractTrain(W, bbModel, vpModel, pos, featType, 1, sigma);
 posTrain = [posTrain, newPosTrain];
 [W, b] = svmTrain(posTrain, negTrain, lambda, biasMult, W, b);
-
 
 for i=1:hardNegItr
     % Get hard negative examples
